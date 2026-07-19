@@ -97,7 +97,7 @@ class JarvisEngine:
             pass
     
     def think(self, input_text: str) -> str:
-        """यूजर की बात समझकर बेस्ट एक्शन चुनना"""
+        """यूजर की बात समझकर बेस्ट收藏 एक्शन चुनना"""
         text_lower = input_text.lower()
         
         # 1. साधारण बातचीत और कमांड्स की पहचान
@@ -236,10 +236,10 @@ def main(page: ft.Page):
         chat_list.controls.append(
             ft.Container(
                 content=ft.Text(user_text, color=ft.Colors.WHITE),
-                alignment=ft.alignment.center_right,
+                alignment=ft.Alignment.CENTER_RIGHT,
                 padding=10,
                 bgcolor=ft.Colors.BLUE_GREY_800,
-                border_radius=ft.border_radius.only(top_left=15, top_right=15, bottom_left=15)
+                border_radius=ft.BorderRadius.only(top_left=15, top_right=15, bottom_left=15)
             )
         )
         user_input.value = ""
@@ -252,11 +252,11 @@ def main(page: ft.Page):
         chat_list.controls.append(
             ft.Container(
                 content=ft.Text(f"JARVIS: {response_text}", color=ft.Colors.CYAN_ACCENT),
-                alignment=ft.alignment.center_left,
+                alignment=ft.Alignment.CENTER_LEFT,
                 padding=10,
                 bgcolor=ft.Colors.BLACK,
                 border=ft.border.all(1, ft.Colors.CYAN),
-                border_radius=ft.border_radius.only(top_left=15, top_right=15, bottom_right=15)
+                border_radius=ft.BorderRadius.only(top_left=15, top_right=15, bottom_right=15)
             )
         )
         page.update()
@@ -270,7 +270,7 @@ def main(page: ft.Page):
     )
     
     send_button = ft.IconButton(
-        icon=ft.icons.SEND_ROUNDED,
+        icon=ft.Icons.SEND,
         icon_color=ft.Colors.CYAN,
         on_click=on_send_click
     )
