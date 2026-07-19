@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Optional, Dict, List, Any
 import requests
 
-# मोबाइल के लिए उपयुक्त AI और मीडिया लाइब्रेरी
+# मोबाइल के लिए उपयुक्त AI और media library
 import openai
 import wolframalpha
 import flet as ft
@@ -235,10 +235,10 @@ def main(page: ft.Page):
         # 1. यूजर का मैसेज चैट में जोड़ना
         chat_list.controls.append(
             ft.Container(
-                content=ft.Text(user_text, color=ft.colors.WHITE),
+                content=ft.Text(user_text, color=ft.Colors.WHITE),
                 alignment=ft.alignment.center_right,
                 padding=10,
-                bgcolor=ft.colors.BLUE_GREY_800,
+                bgcolor=ft.Colors.BLUE_GREY_800,
                 border_radius=ft.border_radius.only(top_left=15, top_right=15, bottom_left=15)
             )
         )
@@ -251,11 +251,11 @@ def main(page: ft.Page):
         # 3. जार्विस का मैसेज चैट में जोड़ना
         chat_list.controls.append(
             ft.Container(
-                content=ft.Text(f"JARVIS: {response_text}", color=ft.colors.CYAN_ACCENT),
+                content=ft.Text(f"JARVIS: {response_text}", color=ft.Colors.CYAN_ACCENT),
                 alignment=ft.alignment.center_left,
                 padding=10,
-                bgcolor=ft.colors.BLACK,
-                border=ft.border.all(1, ft.colors.CYAN),
+                bgcolor=ft.Colors.BLACK,
+                border=ft.border.all(1, ft.Colors.CYAN),
                 border_radius=ft.border_radius.only(top_left=15, top_right=15, bottom_right=15)
             )
         )
@@ -277,7 +277,7 @@ def main(page: ft.Page):
 
     # स्वागत संदेश (Welcome Note)
     chat_list.controls.append(
-        ft.Text("JARVIS System Online. Awaiting your commands, sir.", color=ft.colors.CYAN, text_align=ft.TextAlign.CENTER)
+        ft.Text("JARVIS System Online. Awaiting your commands, sir.", color=ft.Colors.CYAN, text_align=ft.TextAlign.CENTER)
     )
 
     # स्क्रीन पर सब कुछ व्यवस्थित करना
@@ -285,10 +285,10 @@ def main(page: ft.Page):
         ft.Container(
             content=chat_list,
             expand=True,
-            border=ft.border.all(1, ft.colors.GREY_800),
+            border=ft.border.all(1, ft.Colors.GREY_800),
             border_radius=10,
             padding=10,
-            bgcolor=ft.colors.BLACK
+            bgcolor=ft.Colors.BLACK
         ),
         ft.Row(
             controls=[user_input, send_button],
@@ -298,4 +298,3 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
-
