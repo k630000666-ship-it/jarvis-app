@@ -1,300 +1,475 @@
+import flet as ft
+import webbrowser
 import os
-import sys
-import json
-import time
 import datetime
 import random
-import re
-from dataclasses import dataclass
-from typing import Optional, Dict, List, Any
 import requests
+import json
+import subprocess
+import platform
+import folium
+import geocoder
+import threading
+import time
+import pyttsx3
+import speech_recognition as sr
+from plyer import notification
+import psutil
+import socket
+import speedtest
 
-# मोबाइल के लिए उपयुक्त AI और media library
-import openai
-import wolframalpha
-import flet as ft
-
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-
-@dataclass
-class Config:
-    """JARVIS Mobile Configuration"""
-    name: str = "JARVIS"
-    wake_word: str = "jarvis"
-    
-    # API Keys (यहाँ अपनी असली कीज़ डालें)
-    openai_api_key: str = "YOUR_OPENAI_API_KEY"
-    wolfram_app_id: str = "YOUR_WOLFRAM_APP_ID"
-    weather_api_key: str = "YOUR_WEATHER_API_KEY"
-    news_api_key: str = "YOUR_NEWS_API_KEY"
-    
-    # Paths (मोबाइल स्टोरेज के अनुकूल)
-    data_dir: str = "jarvis_mobile_data"
-    
-    # Features
-    enable_ai_chat: bool = True
-    enable_reminders: bool = True
-
-# ============================================================================
-# CORE ENGINE (MOBILE VERSION)
-# ============================================================================
-
-class JarvisEngine:
-    """Core AI Engine optimized for Mobile Devices"""
-    
-    def __init__(self, config: Config):
-        self.config = config
-        self.context = {}
-        self.memory = []
-        self.user_preferences = {"location": "New York"}
-        self.active_tasks = []
+# ------------------- JARVIS CYBER COMMAND CENTER -------------------
+class JarvisCyberAI:
+    def __init__(self):
+        self.name = "JARVIS-CYBER"
+        self.version = "5.0"
+        self.status = "🟢 ACTIVE"
+        self.location = None
+        self.command_history = []
+        self.hack_mode = False
         
-        self._init_ai_models()
-        self._create_directories()
-        self._load_memory()
+        # Voice Engine
+        self.engine = pyttsx3.init()
+        self.engine.setProperty('rate', 180)
+        self.engine.setProperty('volume', 1.0)
         
-    def _init_ai_models(self):
-        """API आधारित एआई मॉडल्स को एक्टिव करना"""
-        # OpenAI Setup
-        if self.config.openai_api_key != "YOUR_OPENAI_API_KEY":
-            openai.api_key = self.config.openai_api_key
-            self.openai_available = True
-        else:
-            self.openai_available = False
-            
-        # WolframAlpha Setup
-        if self.config.wolfram_app_id != "YOUR_WOLFRAM_APP_ID":
-            self.wolfram = wolframalpha.Client(self.config.wolfram_app_id)
-            self.wolfram_available = True
-        else:
-            self.wolfram_available = False
-    
-    def _create_directories(self):
-        os.makedirs(self.config.data_dir, exist_ok=True)
-    
-    def _load_memory(self):
-        memory_file = os.path.join(self.config.data_dir, "memory.json")
-        if os.path.exists(memory_file):
-            try:
-                with open(memory_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    self.memory = data.get('memory', [])
-                    self.user_preferences = data.get('preferences', {"location": "New York"})
-            except:
-                pass
-    
-    def _save_memory(self):
-        memory_file = os.path.join(self.config.data_dir, "memory.json")
-        try:
-            with open(memory_file, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'memory': self.memory[-50:], 
-                    'preferences': self.user_preferences
-                }, f, ensure_ascii=False)
-        except:
-            pass
-    
-    def think(self, input_text: str) -> str:
-        """यूजर की बात समझकर बेस्ट收藏 एक्शन चुनना"""
-        text_lower = input_text.lower()
+        # Network Info
+        self.get_network_info()
         
-        # 1. साधारण बातचीत और कमांड्स की पहचान
-        if any(kw in text_lower for kw in ['hello', 'hi', 'hey', 'नमस्ते']):
-            return random.choice(["Hello sir! How may I assist you today?", "At your service! What do you need?"])
-            
-        elif any(kw in text_lower for kw in ['bye', 'goodbye', 'अल्विदा']):
-            return "Goodbye sir! I'll be here if you need me."
-            
-        elif 'time' in text_lower or 'समय' in text_lower:
-            now = datetime.datetime.now()
-            return f"The current time is {now.strftime('%I:%M %p')}."
-            
-        elif 'weather' in text_lower or 'मौसम' in text_lower:
-            return self.get_weather()
-            
-        elif 'news' in text_lower or 'समाचार' in text_lower:
-            return self.get_news()
-            
-        elif any(kw in text_lower for kw in ['calculate', 'solve', 'math']):
-            expr = text_lower.replace('calculate', '').replace('solve', '').replace('math', '').strip()
-            return self.calculate(expr)
-            
-        elif 'code' in text_lower or 'प्रोग्राम' in text_lower:
-            return self.generate_code(input_text)
-            
-        # 2. अगर कुछ समझ न आए तो OpenAI GPT से पूछना
+    def get_network_info(self):
+        try:
+            self.hostname = socket.gethostname()
+            self.ip = socket.gethostbyname(self.hostname)
+        except:
+            self.hostname = "Unknown"
+            self.ip = "0.0.0.0"
+    
+    def speak(self, text):
+        def _speak():
+            self.engine.say(text)
+            self.engine.runAndWait()
+        threading.Thread(target=_speak, daemon=True).start()
+    
+    def get_location(self):
+        try:
+            g = geocoder.ip('me')
+            self.location = {
+                'lat': g.latlng[0] if g.latlng else 28.6139,
+                'lng': g.latlng[1] if g.latlng else 77.2090,
+                'city': g.city if g.city else "Delhi",
+                'country': g.country if g.country else "India"
+            }
+            return self.location
+        except:
+            self.location = {'lat': 28.6139, 'lng': 77.2090, 'city': 'Delhi', 'country': 'India'}
+            return self.location
+    
+    def create_map(self):
+        loc = self.get_location()
+        m = folium.Map(location=[loc['lat'], loc['lng']], zoom_start=12)
+        
+        folium.Marker(
+            [loc['lat'], loc['lng']],
+            popup=f"{loc['city']}, {loc['country']}",
+            icon=folium.Icon(color='red', icon='info-sign'),
+        ).add_to(m)
+        
+        # Add circle
+        folium.Circle(
+            radius=5000,
+            location=[loc['lat'], loc['lng']],
+            popup="Your Location",
+            color="cyan",
+            fill=True,
+        ).add_to(m)
+        
+        m.save("location_map.html")
+        webbrowser.open("location_map.html")
+        return "Map opened in browser!"
+    
+    def system_info(self):
+        cpu = psutil.cpu_percent()
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        info = f"""
+        ═══════════════════════════════
+        🖥️ SYSTEM INFORMATION
+        ═══════════════════════════════
+        💻 Hostname: {self.hostname}
+        🌐 IP Address: {self.ip}
+        📍 Location: {self.location['city']}, {self.location['country']}
+        ⚡ CPU Usage: {cpu}%
+        🧠 RAM: {memory.percent}% used ({memory.used//(1024**3)}GB/{memory.total//(1024**3)}GB)
+        💾 Disk: {disk.percent}% used
+        🕐 Time: {datetime.datetime.now().strftime('%I:%M:%S %p')}
+        📅 Date: {datetime.datetime.now().strftime('%B %d, %Y')}
+        ═══════════════════════════════
+        """
+        return info
+    
+    def network_scan(self):
+        try:
+            result = subprocess.check_output(['ping', '-c', '4', 'google.com']).decode()
+            return f"✅ Network Active\n{result[:500]}..."
+        except:
+            return "❌ Network Error!"
+    
+    def wifi_password(self):
+        try:
+            if platform.system() == "Windows":
+                output = subprocess.check_output(['netsh', 'wlan', 'show', 'profiles']).decode()
+                profiles = [line.split(":")[1].strip() for line in output.split('\n') if "All User Profile" in line]
+                passwords = []
+                for profile in profiles:
+                    try:
+                        info = subprocess.check_output(['netsh', 'wlan', 'show', 'profile', profile, 'key=clear']).decode()
+                        password = [line.split(":")[1].strip() for line in info.split('\n') if "Key Content" in line]
+                        if password:
+                            passwords.append(f"{profile}: {password[0]}")
+                    except:
+                        pass
+                return "\n".join(passwords) if passwords else "No saved WiFi"
+            else:
+                return "🔒 Feature available on Windows only"
+        except:
+            return "❌ Access Denied!"
+    
+    def speed_test(self):
+        try:
+            st = speedtest.Speedtest()
+            st.get_best_server()
+            download = st.download() / 1_000_000
+            upload = st.upload() / 1_000_000
+            return f"📥 Download: {download:.2f} Mbps\n📤 Upload: {upload:.2f} Mbps"
+        except:
+            return "⚠️ Speed test failed!"
+    
+    def hack_simulator(self):
+        # Legal simulation with cool effect
+        steps = [
+            "🔍 Scanning network...",
+            "📡 Connecting to server...",
+            "🔑 Brute forcing access...",
+            "✅ Access granted!",
+            "📁 Downloading data...",
+            "🕵️ Extracting information...",
+            "🔥 Data encrypted!",
+            "🔒 Securing connection...",
+            "⚠️ Security alert!",
+            "🔄 Re-routing through proxy...",
+            "✅ Mission complete!"
+        ]
+        return steps
+    
+    def process_command(self, cmd):
+        cmd = cmd.lower().strip()
+        response = ""
+        
+        if "map" in cmd or "location" in cmd:
+            response = self.create_map()
+        
+        elif "system" in cmd or "info" in cmd:
+            response = self.system_info()
+        
+        elif "network" in cmd or "ping" in cmd:
+            response = self.network_scan()
+        
+        elif "wifi" in cmd and "password" in cmd:
+            response = self.wifi_password()
+        
+        elif "speed" in cmd:
+            response = self.speed_test()
+        
+        elif "hack" in cmd:
+            response = "\n".join(self.hack_simulator())
+            self.hack_mode = True
+        
+        elif "whoami" in cmd:
+            response = f"🕵️ You are: {os.getlogin()}\n💻 Host: {self.hostname}\n🌐 IP: {self.ip}"
+        
+        elif "help" in cmd:
+            response = """
+            ════════════════════════════════════════
+            🤖 JARVIS CYBER COMMANDS
+            ════════════════════════════════════════
+            🗺️ map - Show your location
+            💻 system - System information
+            🌐 network - Network status
+            📶 wifi password - Show saved WiFi
+            ⚡ speed - Internet speed test
+            🔥 hack - Activate hack mode
+            🕵️ whoami - Your identity
+            🎯 google - Open Google
+            📺 youtube - Open YouTube
+            🎮 matrix - Matrix effect
+            ⏰ time - Current time
+            🗓️ date - Today's date
+            ❌ exit - Quit JARVIS
+            ════════════════════════════════════════
+            """
+        
+        elif "google" in cmd:
+            webbrowser.open("https://google.com")
+            response = "🌐 Opening Google..."
+        
+        elif "youtube" in cmd:
+            webbrowser.open("https://youtube.com")
+            response = "📺 Opening YouTube..."
+        
+        elif "matrix" in cmd:
+            response = self.matrix_effect()
+        
+        elif "time" in cmd:
+            response = f"🕐 {datetime.datetime.now().strftime('%I:%M:%S %p')}"
+        
+        elif "date" in cmd:
+            response = f"📅 {datetime.datetime.now().strftime('%B %d, %Y')}"
+        
+        elif "exit" in cmd or "quit" in cmd:
+            response = "⚠️ Shutting down... See you later!"
+            self.speak(response)
+            exit()
+        
         else:
-            return self.chat_gpt(input_text)
-            
-    def get_weather(self) -> str:
-        location = self.user_preferences.get('location', 'New York')
-        if self.config.weather_api_key == "YOUR_WEATHER_API_KEY":
-            return f"Sir, please set your Weather API key to check the weather for {location}."
-        try:
-            url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={self.config.weather_api_key}&units=metric"
-            data = requests.get(url).json()
-            if data.get('cod') == 200:
-                temp = data['main']['temp']
-                desc = data['weather'][0]['description']
-                return f"The weather in {location} is currently {desc} with a temperature of {temp}°C."
-            return "I couldn't fetch the weather right now."
-        except:
-            return "Network error while fetching weather data."
-            
-    def get_news(self) -> str:
-        if self.config.news_api_key == "YOUR_NEWS_API_KEY":
-            return "Sir, please set your News API key first."
-        try:
-            url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={self.config.news_api_key}"
-            data = requests.get(url).json()
-            if data.get('status') == 'ok':
-                articles = data['articles'][:3]
-                news_list = [f"• {a['title']}" for a in articles]
-                return "Top Headlines:\n" + "\n".join(news_list)
-            return "Could not retrieve the news."
-        except:
-            return "Network error while fetching news."
+            response = f"❓ Unknown command: {cmd}\nType 'help' for commands"
+        
+        self.command_history.append((datetime.datetime.now(), cmd, response))
+        return response
+    
+    def matrix_effect(self):
+        chars = "01"
+        matrix = "\n".join(["".join(random.choice(chars) for _ in range(50)) for _ in range(10)])
+        return f"🌀 MATRIX MODE\n{matrix}"
 
-    def calculate(self, expression: str) -> str:
-        if self.wolfram_available:
-            try:
-                result = self.wolfram.query(expression)
-                return next(result.results).text
-            except:
-                pass
-        try:
-            allowed = {'+', '-', '*', '/', '**', '(', ')', '.', ' '}
-            if all(c in allowed or c.isdigit() for c in expression):
-                return f"The result is {eval(expression)}"
-            return "I can only handle basic arithmetic operations locally."
-        except:
-            return "Calculation failed. Please verify the expression."
-
-    def chat_gpt(self, message: str) -> str:
-        if self.openai_available:
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are JARVIS, an advanced personal AI mobile assistant."},
-                        {"role": "user", "content": message}
-                    ]
-                )
-                return response.choices[0].message.content
-            except:
-                return "I'm having trouble reaching my primary AI servers."
-        return "Offline Mode: Sir, please configure your OpenAI API key for advanced reasoning."
-
-    def generate_code(self, task: str) -> str:
-        if self.openai_available:
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a professional coding expert. Generate clean Python code based on requests."},
-                        {"role": "user", "content": task}
-                    ]
-                )
-                return f"Here is the requested script:\n\n{response.choices[0].message.content}"
-            except:
-                return "Failed to connect to the code generation engine."
-        return "Code generation requires an active OpenAI API key."
-
-# ============================================================================
-# USER INTERFACE (FLET MOBILE UI)
-# ============================================================================
-
+# ------------------- FLET UI - CYBER EDITION -------------------
 def main(page: ft.Page):
-    page.title = "JARVIS AI"
+    page.title = "JARVIS CYBER COMMAND CENTER"
     page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 15
+    page.bgcolor = ft.colors.BLACK
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.padding = 20
     
-    # मोबाइल रिस्पॉन्सिव सेटिंग्स
-    page.window_width = 400
-    page.window_height = 700
-
-    # जार्विस कोर इंजन को शुरू करना
-    config = Config()
-    jarvis = JarvisEngine(config)
-
-    # चैट लेआउट बनाना
-    chat_list = ft.ListView(
-        expand=True,
-        spacing=15,
-        auto_scroll=True
-    )
-
-    def on_send_click(e):
-        if not user_input.value.strip():
-            return
-            
-        user_text = user_input.value.strip()
-        
-        # 1. यूजर का मैसेज चैट में जोड़ना
-        chat_list.controls.append(
-            ft.Container(
-                content=ft.Text(user_text, color=ft.Colors.WHITE),
-                alignment=ft.Alignment.CENTER_RIGHT,
-                padding=10,
-                bgcolor=ft.Colors.BLUE_GREY_800,
-                border_radius=ft.BorderRadius.only(top_left=15, top_right=15, bottom_left=15)
+    jarvis = JarvisCyberAI()
+    
+    # Cyber Matrix Animation
+    def matrix_background():
+        for i in range(100):
+            color = ft.colors.GREEN if random.random() > 0.5 else ft.colors.BLACK
+            yield ft.Container(
+                content=ft.Text(random.choice("01"), color=color, size=random.randint(8, 20)),
+                left=random.randint(0, 800),
+                top=random.randint(0, 600),
+                animate=ft.animation.Animation(1000, "bounceOut"),
             )
-        )
-        user_input.value = ""
-        page.update()
-        
-        # 2. जार्विस का सोचना और जवाब देना
-        response_text = jarvis.think(user_text)
-        
-        # 3. जार्विस का मैसेज चैट में जोड़ना
-        chat_list.controls.append(
-            ft.Container(
-                content=ft.Text(f"JARVIS: {response_text}", color=ft.Colors.CYAN_ACCENT),
-                alignment=ft.Alignment.CENTER_LEFT,
-                padding=10,
-                bgcolor=ft.Colors.BLACK,
-                border=ft.border.all(1, ft.Colors.CYAN),
-                border_radius=ft.BorderRadius.only(top_left=15, top_right=15, bottom_right=15)
-            )
-        )
-        page.update()
-
-    # इनपुट बॉक्स और सेंड बटन
-    user_input = ft.TextField(
-        hint_text="Ask JARVIS anything...",
-        expand=True,
-        border_color=ft.Colors.CYAN,
-        on_submit=on_send_click
+    
+    # Custom Scrollable Chat
+    chat_container = ft.Column(
+        spacing=10,
+        scroll=ft.ScrollMode.AUTO,
+        height=450,
+        width=700,
     )
     
-    send_button = ft.IconButton(
-        icon=ft.Icons.SEND,
-        icon_color=ft.Colors.CYAN,
-        on_click=on_send_click
-    )
-
-    # स्वागत संदेश (Welcome Note)
-    chat_list.controls.append(
-        ft.Text("JARVIS System Online. Awaiting your commands, sir.", color=ft.Colors.CYAN, text_align=ft.TextAlign.CENTER)
-    )
-
-    # स्क्रीन पर सब कुछ व्यवस्थित करना
-    page.add(
-        ft.Container(
-            content=chat_list,
-            expand=True,
-            border=ft.border.all(1, ft.Colors.GREY_800),
-            border_radius=10,
-            padding=10,
-            bgcolor=ft.Colors.BLACK
+    # Terminal Style Input
+    input_field = ft.TextField(
+        hint_text=">_ ENTER COMMAND...",
+        width=550,
+        border_color=ft.colors.CYAN,
+        focused_border_color=ft.colors.GREEN,
+        text_style=ft.TextStyle(
+            color=ft.colors.GREEN,
+            font_family="Courier",
+            size=16
         ),
-        ft.Row(
-            controls=[user_input, send_button],
-            spacing=10
-        )
+        hint_style=ft.TextStyle(
+            color=ft.colors.GREY,
+            font_family="Courier",
+            size=14
+        ),
+        on_submit=lambda e: send_command(),
+        prefix_text="> ",
+        prefix_style=ft.TextStyle(color=ft.colors.CYAN),
     )
+    
+    # Cyber Buttons
+    def create_cyber_button(text, icon, color, action):
+        return ft.IconButton(
+            icon=icon,
+            icon_color=color,
+            icon_size=25,
+            tooltip=text,
+            on_click=action,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                bgcolor=ft.colors.BLACK,
+                side=ft.border.all(1, color),
+            ),
+        )
+    
+    # Status Bar
+    status_bar = ft.Container(
+        content=ft.Row([
+            ft.Text("⚡ JARVIS-CYBER", color=ft.colors.CYAN, weight=ft.FontWeight.BOLD),
+            ft.Text("•", color=ft.colors.GREY),
+            ft.Text("SYSTEM ACTIVE", color=ft.colors.GREEN, size=12),
+            ft.Text("•", color=ft.colors.GREY),
+            ft.Text(f"IP: {jarvis.ip}", color=ft.colors.YELLOW, size=12),
+            ft.Text("•", color=ft.colors.GREY),
+            ft.Text(datetime.datetime.now().strftime("%H:%M:%S"), color=ft.colors.CYAN, size=12),
+        ]),
+        padding=10,
+        bgcolor=ft.colors.BLUE_GREY_900,
+        border=ft.border.all(1, ft.colors.CYAN),
+        border_radius=5,
+        width=700,
+    )
+    
+    # Command Output
+    def add_output(text, is_user=False):
+        color = ft.colors.GREEN if not is_user else ft.colors.CYAN
+        prefix = "👤" if is_user else "🤖"
+        
+        container = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text(prefix, size=16),
+                    ft.Text(
+                        text,
+                        color=color,
+                        size=14,
+                        font_family="Courier",
+                    )
+                ]),
+            ]),
+            padding=10,
+            bgcolor=ft.colors.BLACK if not is_user else ft.colors.BLUE_GREY_900,
+            border=ft.border.all(1, color),
+            border_radius=10,
+            width=650,
+        )
+        chat_container.controls.append(container)
+        page.update()
+        # Auto scroll
+        if len(chat_container.controls) > 0:
+            chat_container.scroll_to(offset=-1, duration=300)
+    
+    # Send Command
+    def send_command():
+        if input_field.value.strip():
+            cmd = input_field.value
+            add_output(f"{cmd}", is_user=True)
+            input_field.value = ""
+            page.update()
+            
+            # Process
+            response = jarvis.process_command(cmd)
+            
+            # If hack mode, show cool effect
+            if "hack" in cmd:
+                for step in response.split('\n'):
+                    add_output(f"⚡ {step}")
+                    time.sleep(0.3)
+                    page.update()
+            else:
+                add_output(response)
+            
+            jarvis.speak(response[:100])  # Speak first 100 chars
+    
+    # Voice Command
+    def voice_command():
+        try:
+            status_bar.content.controls[2] = ft.Text("🎤 LISTENING...", color=ft.colors.RED, size=12)
+            page.update()
+            
+            r = sr.Recognizer()
+            with sr.Microphone() as source:
+                audio = r.listen(source, timeout=5)
+                text = r.recognize_google(audio)
+                input_field.value = text
+                page.update()
+                send_command()
+        except:
+            add_output("⚠️ Voice recognition failed!")
+        finally:
+            status_bar.content.controls[2] = ft.Text("SYSTEM ACTIVE", color=ft.colors.GREEN, size=12)
+            page.update()
+    
+    # Clear Screen
+    def clear_screen(e):
+        chat_container.controls.clear()
+        add_output("🔄 Screen cleared!")
+        page.update()
+    
+    # Special Hack Button
+    def hack_mode(e):
+        add_output("🔥 ACTIVATING HACK MODE...")
+        response = jarvis.hack_simulator()
+        for step in response:
+            add_output(f"⚡ {step}")
+            time.sleep(0.2)
+            page.update()
+        add_output("✅ HACK MODE ACTIVE - ALL SYSTEMS GO!")
+    
+    # Buttons Row
+    button_row = ft.Row([
+        create_cyber_button("Map", ft.icons.MAP, ft.colors.GREEN, lambda e: send_command_with("map")),
+        create_cyber_button("System", ft.icons.DEVICES, ft.colors.CYAN, lambda e: send_command_with("system")),
+        create_cyber_button("Network", ft.cons.NETWORK_WIFI, ft.colors.YELLOW, lambda e: send_command_with("network")),
+        create_cyber_button("Speed", ft.icons.SPEED, ft.colors.PURPLE, lambda e: send_command_with("speed")),
+        create_cyber_button("Hack", ft.icons.BOLT, ft.colors.RED, hack_mode),
+        create_cyber_button("Clear", ft.icons.CLEAR, ft.colors.WHITE, clear_screen),
+        create_cyber_button("Mic", ft.icons.MIC, ft.colors.ORANGE, lambda e: voice_command()),
+    ], alignment=ft.MainAxisAlignment.CENTER, spacing=5)
+    
+    def send_command_with(cmd):
+        input_field.value = cmd
+        send_command()
+    
+    # Main Layout
+    main_container = ft.Container(
+        content=ft.Column([
+            status_bar,
+            ft.Divider(color=ft.colors.CYAN, height=1),
+            chat_container,
+            ft.Divider(color=ft.colors.CYAN, height=1),
+            input_field,
+            button_row,
+        ]),
+        bgcolor=ft.colors.BLACK,
+        border=ft.border.all(2, ft.colors.CYAN),
+        border_radius=15,
+        padding=20,
+        width=750,
+    )
+    
+    # Background Matrix
+    matrix_bg = ft.Stack([
+        ft.Container(
+            content=ft.Row([
+                ft.Text("01", color=ft.colors.GREEN_400, size=10, opacity=0.1)
+                for _ in range(30)
+            ]),
+            width=800,
+            height=700,
+            opacity=0.1,
+        ),
+    ])
+    
+    page.add(matrix_bg, main_container)
+    
+    # Welcome
+    add_output("╔═══════════════════════════════════════╗")
+    add_output("║   🤖 JARVIS CYBER COMMAND CENTER     ║")
+    add_output("║   Version 5.0 | AI Personal Assistant ║")
+    add_output("╚═══════════════════════════════════════╝")
+    add_output("💡 Type 'help' for commands")
+    add_output("📍 Location detected: " + jarvis.location['city'] if jarvis.location else "")
+    add_output(f"🌐 IP: {jarvis.ip}")
+    add_output("🟢 System ready!")
+    
+    jarvis.speak("JARVIS Cyber system activated")
 
+# ------------------- RUN -------------------
 if __name__ == "__main__":
     ft.app(target=main)
