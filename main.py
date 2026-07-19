@@ -265,13 +265,13 @@ def main(page: ft.Page):
     user_input = ft.TextField(
         hint_text="Ask JARVIS anything...",
         expand=True,
-        border_color=ft.colors.CYAN,
+        border_color=ft.Colors.CYAN,
         on_submit=on_send_click
     )
     
     send_button = ft.IconButton(
         icon=ft.icons.SEND_ROUNDED,
-        icon_color=ft.colors.CYAN,
+        icon_color=ft.Colors.CYAN,
         on_click=on_send_click
     )
 
